@@ -35,26 +35,12 @@ function recieveString (receievedString: string) {
         maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOn)
     } else if (receievedString == "P14") {
         maqueen.writeLED(maqueen.LED.LEDRight, maqueen.LEDswitch.turnOn)
-    } else if (receievedString.includes("FW")) {
-        if (hatHinderniss == 0) {
-            maqueen.motorRun(maqueen.Motors.All, maqueen.Dir.CW, (parseFloat(receievedString.substr(2, 10)) - 1) / 2)
-        }
-    } else if (receievedString.includes("BW")) {
-        maqueen.motorRun(maqueen.Motors.All, maqueen.Dir.CCW, (parseFloat(receievedString.substr(2, 10)) - 1) / 2)
-    } else if (receievedString == "L") {
-        maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, 20)
-        maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, 100)
-    } else if (receievedString == "R") {
-        maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, 100)
-        maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, 20)
     } else if (receievedString == "P15") {
         if (receievedString != lastButton) {
             LEDFarbeÄndern()
         }
     } else {
-        maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOff)
-        maqueen.writeLED(maqueen.LED.LEDRight, maqueen.LEDswitch.turnOff)
-        maqueen.motorStop(maqueen.Motors.All)
+        Motor_Stop()
     }
     lastButton = receievedString
 }
@@ -70,9 +56,12 @@ function LED_Init () {
     LEDRing.show()
 }
 function fahrevorwärts () {
-    maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, x - y)
-    maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, x + y)
+    maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, Math.constrain(Math.abs(x - y), 10, 255))
+    maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, Math.constrain(Math.abs(x + y), 0, 255))
 }
+radio.onReceivedString(function (receivedString) {
+    recieveString(receivedString)
+})
 radio.onReceivedValue(function (name, value) {
     serial.writeValue(name, value)
     if (name == "x") {
@@ -82,12 +71,17 @@ radio.onReceivedValue(function (name, value) {
         y = value
     }
     if (y > 10) {
-        fahrevorwärts()
+        if (hatHinderniss == 0) {
+            fahrevorwärts()
+        }
     } else if (y < -10) {
         fahrerückwärts()
     } else {
         Motor_Stop()
     }
+    serial.writeValue("x1", x)
+    serial.writeValue("y1", y)
+    serial.writeValue("hinderniss", hatHinderniss)
 })
 function LEDFarbeÄndern () {
     if (aktuelleFarbe == 7) {
@@ -124,14 +118,18 @@ function _36GradLinks () {
     maqueen.motorStop(maqueen.Motors.All)
 }
 function Motor_Stop () {
+    maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOff)
+    maqueen.writeLED(maqueen.LED.LEDRight, maqueen.LEDswitch.turnOff)
     maqueen.motorStop(maqueen.Motors.All)
+    x = 0
+    y = 0
 }
+let hatHinderniss = 0
 let aktuelleFarbe = 0
 let LEDRing: neopixel.Strip = null
 let strip: neopixel.Strip = null
 let y = 0
 let x = 0
-let hatHinderniss = 0
 let lastButton = ""
 radio.setGroup(1)
 LED_Init()
