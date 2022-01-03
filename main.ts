@@ -30,7 +30,7 @@ function recieveString (receievedString: string) {
             _36GradLinks()
         }
     } else if (receievedString == "B") {
-        FollowLine()
+    	
     } else if (receievedString == "P16") {
         maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOn)
     } else if (receievedString == "P14") {
@@ -47,6 +47,10 @@ function recieveString (receievedString: string) {
 function fahrerückwärts () {
     maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CCW, x - y)
     maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CCW, x + y)
+}
+function measureBattery () {
+    V_Bat = pins.analogReadPin(AnalogPin.P0) * 1000 / 340
+    radio.sendValue("v_bat", V_Bat)
 }
 function LED_Init () {
     strip = neopixel.create(DigitalPin.P15, 4, NeoPixelMode.RGB)
@@ -128,6 +132,7 @@ let hatHinderniss = 0
 let aktuelleFarbe = 0
 let LEDRing: neopixel.Strip = null
 let strip: neopixel.Strip = null
+let V_Bat = 0
 let y = 0
 let x = 0
 let lastButton = ""
@@ -154,4 +159,5 @@ basic.forever(function () {
     } else {
         hatHinderniss = 0
     }
+    measureBattery()
 })
