@@ -49,8 +49,22 @@ function fahrerückwärts () {
     maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CCW, x + y)
 }
 function measureBattery () {
-    V_Bat = pins.analogReadPin(AnalogPin.P0) * 1000 / 340
+    V_Bat = pins.analogReadPin(AnalogReadWritePin.P0) * 1000 / 340
     radio.sendValue("v_bat", V_Bat)
+}
+function Motor_Stop () {
+    maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOff)
+    maqueen.writeLED(maqueen.LED.LEDRight, maqueen.LEDswitch.turnOff)
+    maqueen.motorStop(maqueen.Motors.All)
+    x = 0
+    y = 0
+}
+function _36GradLinks () {
+    for (let index = 0; index < 600; index++) {
+        maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, 255)
+        maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CCW, 255)
+    }
+    maqueen.motorStop(maqueen.Motors.All)
 }
 function LED_Init () {
     strip = neopixel.create(DigitalPin.P15, 4, NeoPixelMode.RGB)
@@ -113,20 +127,6 @@ function LEDFarbeÄndern () {
     	
     }
     strip.show()
-}
-function _36GradLinks () {
-    for (let index = 0; index < 600; index++) {
-        maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, 255)
-        maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CCW, 255)
-    }
-    maqueen.motorStop(maqueen.Motors.All)
-}
-function Motor_Stop () {
-    maqueen.writeLED(maqueen.LED.LEDLeft, maqueen.LEDswitch.turnOff)
-    maqueen.writeLED(maqueen.LED.LEDRight, maqueen.LEDswitch.turnOff)
-    maqueen.motorStop(maqueen.Motors.All)
-    x = 0
-    y = 0
 }
 let hatHinderniss = 0
 let aktuelleFarbe = 0

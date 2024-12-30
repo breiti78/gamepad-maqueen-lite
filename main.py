@@ -20,55 +20,78 @@ def FollowLine():
             maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CW, 0)
 def recieveString(receievedString: str):
     global lastButton
+    serial.write_line(receievedString)
     if receievedString == "A":
         if receievedString != lastButton:
             _36GradLinks()
     elif receievedString == "B":
-        FollowLine()
+        pass
     elif receievedString == "P16":
         maqueen.write_led(maqueen.LED.LED_LEFT, maqueen.LEDswitch.TURN_ON)
     elif receievedString == "P14":
         maqueen.write_led(maqueen.LED.LED_RIGHT, maqueen.LEDswitch.TURN_ON)
-    elif receievedString.includes("FW"):
-        if hatHinderniss == 0:
-            maqueen.motor_run(maqueen.Motors.ALL,
-                maqueen.Dir.CW,
-                (parse_float(receievedString.substr(2, 10)) - 1) / 2)
-    elif receievedString.includes("BW"):
-        maqueen.motor_run(maqueen.Motors.ALL,
-            maqueen.Dir.CCW,
-            (parse_float(receievedString.substr(2, 10)) - 1) / 2)
-    elif receievedString == "L":
-        maqueen.motor_run(maqueen.Motors.M1, maqueen.Dir.CW, 20)
-        maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CW, 100)
-    elif receievedString == "R":
-        maqueen.motor_run(maqueen.Motors.M1, maqueen.Dir.CW, 100)
-        maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CW, 20)
     elif receievedString == "P15":
         if receievedString != lastButton:
             LEDFarbeÄndern()
     else:
-        maqueen.write_led(maqueen.LED.LED_LEFT, maqueen.LEDswitch.TURN_OFF)
-        maqueen.write_led(maqueen.LED.LED_RIGHT, maqueen.LEDswitch.TURN_OFF)
-        maqueen.motor_stop(maqueen.Motors.ALL)
+        Motor_Stop()
     lastButton = receievedString
+def fahrerückwärts():
+    maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CCW, x - y)
+    maqueen.motor_run(maqueen.Motors.M1, maqueen.Dir.CCW, x + y)
+def measureBattery():
+    global V_Bat
+    V_Bat = pins.analog_read_pin(AnalogReadWritePin.P0) * 1000 / 340
+    radio.send_value("v_bat", V_Bat)
+def Motor_Stop():
+    global x, y
+    maqueen.write_led(maqueen.LED.LED_LEFT, maqueen.LEDswitch.TURN_OFF)
+    maqueen.write_led(maqueen.LED.LED_RIGHT, maqueen.LEDswitch.TURN_OFF)
+    maqueen.motor_stop(maqueen.Motors.ALL)
+    x = 0
+    y = 0
+def _36GradLinks():
+    for index in range(600):
+        maqueen.motor_run(maqueen.Motors.M1, maqueen.Dir.CW, 255)
+        maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CCW, 255)
+    maqueen.motor_stop(maqueen.Motors.ALL)
 def LED_Init():
-    global strip, LEDFarben, aktuelleFarbe
+    global strip, LEDRing, aktuelleFarbe
     strip = neopixel.create(DigitalPin.P15, 4, NeoPixelMode.RGB)
-    LEDFarben = ["rot",
-        "orange",
-        "gelb",
-        "grün",
-        "blau",
-        "indigo",
-        "blauviolett",
-        "magenta"]
+    LEDRing = neopixel.create(DigitalPin.P2, 24, NeoPixelMode.RGB)
     aktuelleFarbe = 0
+    LEDRing.show_rainbow(1, 360)
+    LEDRing.show()
+def fahrevorwärts():
+    maqueen.motor_run(maqueen.Motors.M2,
+        maqueen.Dir.CW,
+        Math.constrain(abs(x - y), 10, 255))
+    maqueen.motor_run(maqueen.Motors.M1,
+        maqueen.Dir.CW,
+        Math.constrain(abs(x + y), 0, 255))
 
 def on_received_string(receivedString):
     recieveString(receivedString)
-    serial.write_line(receivedString)
 radio.on_received_string(on_received_string)
+
+def on_received_value(name, value):
+    global x, y
+    serial.write_value(name, value)
+    if name == "x":
+        x = value
+    if name == "y":
+        y = value
+    if y > 10:
+        if hatHinderniss == 0:
+            fahrevorwärts()
+    elif y < -10:
+        fahrerückwärts()
+    else:
+        Motor_Stop()
+    serial.write_value("x1", x)
+    serial.write_value("y1", y)
+    serial.write_value("hinderniss", hatHinderniss)
+radio.on_received_value(on_received_value)
 
 def LEDFarbeÄndern():
     global aktuelleFarbe
@@ -95,32 +118,30 @@ def LEDFarbeÄndern():
     else:
         pass
     strip.show()
-def _36GradLinks():
-    for index in range(600):
-        maqueen.motor_run(maqueen.Motors.M1, maqueen.Dir.CW, 255)
-        maqueen.motor_run(maqueen.Motors.M2, maqueen.Dir.CCW, 255)
-    maqueen.motor_stop(maqueen.Motors.ALL)
-aktuelleFarbe = 0
-LEDFarben: List[str] = []
-strip: neopixel.Strip = None
 hatHinderniss = 0
+aktuelleFarbe = 0
+LEDRing: neopixel.Strip = None
+strip: neopixel.Strip = None
+V_Bat = 0
+y = 0
+x = 0
 lastButton = ""
 radio.set_group(1)
 LED_Init()
 basic.show_leds("""
     . . . . .
-        . # . # .
-        . . . . .
-        # . . . #
-        . # # # .
-""")
+    . # . # .
+    . . . . .
+    # . . . #
+    . # # # .
+    """)
 basic.show_leds("""
     . . . . .
-        . . . . .
-        . . . . .
-        . . . . .
-        . . . . .
-""")
+    . . . . .
+    . . . . .
+    . . . . .
+    . . . . .
+    """)
 
 def on_forever():
     global hatHinderniss
@@ -129,4 +150,5 @@ def on_forever():
         hatHinderniss = 1
     else:
         hatHinderniss = 0
+    measureBattery()
 basic.forever(on_forever)
